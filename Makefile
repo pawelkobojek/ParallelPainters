@@ -11,8 +11,8 @@ endif
 
 compile: ${FILE}.c
 	gcc ${flags} -o ${FILE}.o -c ${FILE}.c 
-	gcc ${flags} -pthread -o ${FILE} ${FILE}.o
-run: compile
+	gcc ${flags} -lpthread -pthread -o ${FILE} ${FILE}.o
+run: ${FILE} 
 	./${FILE} ${RUN_ARGS}
 clean:
 	-rm -f ${FILE}.o ${FILE}

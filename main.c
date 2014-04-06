@@ -103,7 +103,6 @@ void* assistant1(void* arg) {
 	printf("Assistant#1 started work!\n");
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
-		print_state();
 		
 		/* Lock workshop */
 		pthread_mutex_lock(&workshop);
@@ -309,6 +308,11 @@ int main(int argc, char** argv) {
 		/* Starting painters threads. */
 		if(pthread_create(&painters[i], NULL, painter, (void*)paintersIds[i])!= 0)
 			ERR("pthread_create");
+	}
+
+	while(someone_is_painting()) {
+		sleep(2);
+		print_state();
 	}
 
 	for(i = 0; i < n; i++) {
