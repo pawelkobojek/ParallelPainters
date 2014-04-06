@@ -30,6 +30,8 @@
 #define MIN_ASSISTANT_SLEEP MIN_THINKING * 2
 #define MAX_ASSISTANT_SLEEP MAX_THINKING * 2
 
+#define PRINT_STATE_INTERVAL 2
+
 #define WINE_MAX 4
 
 pthread_mutex_t workshop = PTHREAD_MUTEX_INITIALIZER;
@@ -310,10 +312,15 @@ int main(int argc, char** argv) {
 			ERR("pthread_create");
 	}
 
+	/* This loop is used only for printing state (every 2 seconds table state is printed to stdout) */
 	while(someone_is_painting()) {
 		sleep(2);
 		print_state();
 	}
+	
+	/* Printing final state */
+	print_state();
+
 
 	for(i = 0; i < n; i++) {
 		if(pthread_join(painters[i], NULL) == -1) {
@@ -327,8 +334,6 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	print_state();
-	
 	for(i = 0; i < n; i++) {
 		pthread_cond_destroy(&painters_cond[i]);
 	}
