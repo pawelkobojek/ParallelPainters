@@ -1,12 +1,18 @@
-N = 10
-FLAGS = -pthread -Wall -pedantic
+FILE=main
 
-compile: main.c 
-	gcc ${FLAGS} -o main main.c
-run: main
-	./main ${N}
+flags=-Wall
 
-.PHONY: clean
+ifeq (run,$(firstword $(MAKECMDGOALS)))
+  RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  $(eval $(RUN_ARGS):;@:)
+endif
 
+#ifeq(${#RUN_ARGS})
+
+compile: ${FILE}.c
+	gcc ${flags} -o ${FILE}.o -c ${FILE}.c 
+	gcc ${flags} -pthread -o ${FILE} ${FILE}.o
+run: ${FILE}
+	./${FILE} ${RUN_ARGS}
 clean:
-	rm main
+	-rm -f ${FILE}.o ${FILE}

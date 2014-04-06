@@ -11,7 +11,7 @@
 /* #define usleep(smth) (usleep(0)) */
 
 #define NUM_ASSISTANTS 3
-#define PAINT_MAX 3
+#define PAINT_MAX 3 
 
 #define BRUSH_CLEAN -1
 
@@ -27,10 +27,10 @@
 #define MIN_THINKING 2
 #define MAX_THINKING 7
 
-#define MIN_ASSISTANT_SLEEP 2
-#define MAX_ASSISTANT_SLEEP 7
+#define MIN_ASSISTANT_SLEEP 20
+#define MAX_ASSISTANT_SLEEP 70
 
-#define WINE_MAX 750
+#define WINE_MAX 4
 
 pthread_mutex_t workshop = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t* painters_mutex;
@@ -91,7 +91,7 @@ int someone_is_painting() {
 void* assistant1(void* arg) {
 	int i;
 	
-	fprintf(stderr, "Assistant#1 started work!\n");
+//	fprintf(stderr, "Assistant#1 started work!\n");
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
 		
@@ -106,10 +106,10 @@ void* assistant1(void* arg) {
 		}
 
 		pthread_mutex_unlock(&workshop);
-		printf("Assistant cleaned all brushes.\n");
+//		printf("Assistant cleaned all brushes.\n");
 	}
 
-	fprintf(stderr, "Assistant#1 ended work!\n");
+//	fprintf(stderr, "Assistant#1 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -119,7 +119,7 @@ void* assistant1(void* arg) {
 void* assistant2(void* arg) {
 	int i;
 
-	fprintf(stderr, "Assistant#2 started work!\n");
+//	fprintf(stderr, "Assistant#2 started work!\n");
 
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
@@ -134,10 +134,10 @@ void* assistant2(void* arg) {
 
 		pthread_mutex_unlock(&workshop);
 
-		printf("Assistant refilled all paints.\n");
+//		printf("Assistant refilled all paints.\n");
 	}
 
-	fprintf(stderr, "Assistant#2 ended work!\n");
+//	fprintf(stderr, "Assistant#2 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -145,7 +145,7 @@ void* assistant2(void* arg) {
 * Assistant responsible for wine delivery.
 */
 void* assistant3(void* arg) {
-	fprintf(stderr, "Assistant#3 started work!\n");	
+//	fprintf(stderr, "Assistant#3 started work!\n");	
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
 		
@@ -155,10 +155,10 @@ void* assistant3(void* arg) {
 		}
 		pthread_cond_broadcast(&cond);
 		pthread_mutex_unlock(&workshop);
-		printf("Assistant refilled wine bottle.\n");
+//		printf("Assistant refilled wine bottle.\n");
 	}
 	
-	fprintf(stderr, "Assistant#3 ended work!\n");
+//	fprintf(stderr, "Assistant#3 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -173,18 +173,19 @@ void* painter(void* arg) {
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
+		print_state();
 
-		printf("Painter#%d is thinking...\n", painterId);
+//		printf("Painter#%d is thinking...\n", painterId);
 		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);
 		
-		fprintf(stderr, "[%d], Locking workshop.\n", painterId);
+//		fprintf(stderr, "[%d], Locking workshop.\n", painterId);
 		pthread_mutex_lock(&workshop);
 
 		/* wait for resources */
 		while( !painting_possible(painterId) ) {
 
-			fprintf(stderr, "Painter#%d is waiting for resources...\n", painterId);
-			print_state();
+//			fprintf(stderr, "Painter#%d is waiting for resources...\n", painterId);
+//			print_state();
 /*			pthread_cond_wait(&painters_cond[painterId], &workshop); */
 			pthread_cond_wait(&cond, &workshop);
 		}
@@ -212,12 +213,12 @@ void* painter(void* arg) {
 		pthread_cond_broadcast(&cond);
 
 		pthread_mutex_unlock(&painters_mutex[painterId]);
-		printf("Painter's #%d painting: %d\n", painterId, painting[painterId]);
+//		printf("Painter's #%d painting: %d\n", painterId, painting[painterId]);
 
 	}
 	
 	painters_state[painterId] = STATE_FINISHED;
-	printf("Painter#%d finished his painting!\n", painterId);
+//	printf("Painter#%d finished his painting!\n", painterId);
 	pthread_exit(NULL);
 }
 
@@ -270,16 +271,16 @@ int main(int argc, char** argv) {
 		paints[i] = PAINT_MAX;
 	}
 
-	printf("Initial state:\n");
-	printf("Brushes:\n");
+//	printf("Initial state:\n");
+//	printf("Brushes:\n");
 
-	for(i = 0; i < n/2; ++i) {
-		printf("Brush#%d: %d\n", i, brushes[i]);
-	}
+//	for(i = 0; i < n/2; ++i) {
+//		printf("Brush#%d: %d\n", i, brushes[i]);
+//	}
 
-	for(i = 0; i < n/2; i++) {
-		printf("Paint#%d: %d\n", i, paints[i]);
-	}
+//	for(i = 0; i < n/2; i++) {
+//		printf("Paint#%d: %d\n", i, paints[i]);
+//	}
 
 	for(i = 0; i < n; i++) {
 		/* Initializing conditional variables associated with painters */
