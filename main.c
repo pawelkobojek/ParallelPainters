@@ -97,7 +97,9 @@ void* assistant1(void* arg) {
 		
 		pthread_mutex_lock(&workshop);
 		for(i = 0; i < n/2; i++) {
-			brushes[i] = BRUSH_CLEAN;
+			if( painters_state[2*i] != STATE_PAINTING && painters_state[2*i + 1] != STATE_PAINTING ) {
+				brushes[i] = BRUSH_CLEAN;
+			}
 		}
 //		print_state();
 
@@ -173,20 +175,17 @@ void* painter(void* arg) {
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
-		print_state();
-
-//		printf("Painter#%d is thinking...\n", painterId);
+		/* print_state() */
+		/* printf("Painter#%d is thinking...\n", painterId); */
 		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);
 		
-//		fprintf(stderr, "[%d], Locking workshop.\n", painterId);
+		/* fprintf(stderr, "[%d], Locking workshop.\n", painterId); */
 		pthread_mutex_lock(&workshop);
 
 		/* wait for resources */
 		while( !painting_possible(painterId) ) {
 
-//			fprintf(stderr, "Painter#%d is waiting for resources...\n", painterId);
 //			print_state();
-/*			pthread_cond_wait(&painters_cond[painterId], &workshop); */
 			pthread_cond_wait(&cond, &workshop);
 		}
 
