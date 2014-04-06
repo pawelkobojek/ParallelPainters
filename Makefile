@@ -12,7 +12,7 @@ endif
 compile: ${FILE}.c
 	gcc ${flags} -o ${FILE}.o -c ${FILE}.c 
 	gcc ${flags} -pthread -o ${FILE} ${FILE}.o
-run: ${FILE}
+run: compile
 	./${FILE} ${RUN_ARGS}
 clean:
 	-rm -f ${FILE}.o ${FILE}
