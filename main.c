@@ -8,7 +8,6 @@
 #define ERR(source) (fprintf(stderr,"%s:%d\n",__FILE__,__LINE__),\
                      perror(source),kill(0,SIGKILL),\
 		     		     exit(EXIT_FAILURE))
-/* #define usleep(smth) (usleep(0)) */
 
 #define NUM_ASSISTANTS 3
 #define PAINT_MAX 3 
@@ -33,7 +32,6 @@
 #define WINE_MAX 4
 
 pthread_mutex_t workshop = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t* painters_mutex;
 pthread_cond_t* painters_cond;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int* painters_state;
@@ -46,6 +44,7 @@ unsigned r_seed;
 void print_state() {
 	int i;
 	char* painter_state = "painting";
+	printf("-------------------------\n");
 	printf("Workshop state:\nBrushes:\n");
 	for(i = 0; i < n/2; i++) {
 		if(brushes[i] == BRUSH_CLEAN) {
@@ -69,7 +68,8 @@ void print_state() {
 		}
 		printf("[#%d: %s, %d] ", i, painter_state, painting[i]);
 	}
-	printf("\n"); 
+	printf("\n-------------------------\n");
+	 
 }
 
 int painting_possible(int painter) {
@@ -95,9 +95,10 @@ int someone_is_painting() {
 void* assistant1(void* arg) {
 	int i;
 	
-//	fprintf(stderr, "Assistant#1 started work!\n");
+	printf("Assistant#1 started work!\n");
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
+		print_state();
 		
 		pthread_mutex_lock(&workshop);
 		for(i = 0; i < n/2; i++) {
@@ -105,18 +106,16 @@ void* assistant1(void* arg) {
 				brushes[i] = BRUSH_CLEAN;
 			}
 		}
-//		print_state();
 
 		if(wine > 0) {
 			pthread_cond_broadcast(&cond);
 		}
 
 		pthread_mutex_unlock(&workshop);
-		print_state();
-//		printf("Assistant cleaned all brushes.\n");
+		printf("Assistant#1 cleaned all brushes.\n");
 	}
 
-//	fprintf(stderr, "Assistant#1 ended work!\n");
+	printf("Assistant#1 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -126,7 +125,7 @@ void* assistant1(void* arg) {
 void* assistant2(void* arg) {
 	int i;
 
-//	fprintf(stderr, "Assistant#2 started work!\n");
+	printf("Assistant#2 started work!\n");
 
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
@@ -141,10 +140,10 @@ void* assistant2(void* arg) {
 
 		pthread_mutex_unlock(&workshop);
 
-//		printf("Assistant refilled all paints.\n");
+		printf("Assistant#2 refilled all paints.\n");
 	}
 
-//	fprintf(stderr, "Assistant#2 ended work!\n");
+	printf("Assistant#2 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -152,20 +151,20 @@ void* assistant2(void* arg) {
 * Assistant responsible for wine delivery.
 */
 void* assistant3(void* arg) {
-//	fprintf(stderr, "Assistant#3 started work!\n");	
+	printf("Assistant#3 started work!\n");	
 	while(someone_is_painting()) {
 		usleep(rand_r(&r_seed) % (MAX_ASSISTANT_SLEEP - MIN_ASSISTANT_SLEEP) + MIN_ASSISTANT_SLEEP);
 		
 		pthread_mutex_lock(&workshop);
 		if(wine != WINE_MAX) {
 			wine = WINE_MAX;
+			pthread_cond_broadcast(&cond);
 		}
-		pthread_cond_broadcast(&cond);
 		pthread_mutex_unlock(&workshop);
-//		printf("Assistant refilled wine bottle.\n");
+		printf("Assistant#3 refilled wine bottle.\n");
 	}
 	
-//	fprintf(stderr, "Assistant#3 ended work!\n");
+	printf("Assistant#3 ended work!\n");
 	pthread_exit(NULL);
 }
 
@@ -176,7 +175,7 @@ void* painter(void* arg) {
 	int painterId = *((int*)arg);
 	int brush = painterId / 2;
 	int paint = (painterId % 2) ? (painterId/2 + 1) % n/2 : painterId/2;
-/*	fprintf(stderr, "Painter#%d started!\n", painterId); */
+	printf("Painter#%d started!\n", painterId);
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
@@ -187,8 +186,7 @@ void* painter(void* arg) {
 
 		/* wait for resources */
 		while( !painting_possible(painterId) ) {
-
-//			print_state();
+			
 			pthread_cond_wait(&cond, &workshop);
 		}
 
@@ -200,7 +198,6 @@ void* painter(void* arg) {
 			 painterId/2,
 			 painterId, wine-1);*/
 
-		pthread_mutex_lock(&painters_mutex[painterId]);
 		/* Get resources */
 		wine--;
 		brushes[brush] = painterId;
@@ -215,13 +212,12 @@ void* painter(void* arg) {
 		painters_state[painterId] = STATE_THINKING;
 		pthread_cond_broadcast(&cond);
 
-		pthread_mutex_unlock(&painters_mutex[painterId]);
-//		printf("Painter's #%d painting: %d\n", painterId, painting[painterId]);
+		//printf("Painter's #%d painting: %d\n", painterId, painting[painterId]);
 
 	}
 	
 	painters_state[painterId] = STATE_FINISHED;
-//	printf("Painter#%d finished his painting!\n", painterId);
+	printf("Painter#%d finished his painting!\n", painterId);
 	pthread_exit(NULL);
 }
 
@@ -265,10 +261,6 @@ int main(int argc, char** argv) {
 		ERR("calloc");
 	}
 
-	if( (painters_mutex = calloc(n, sizeof(pthread_mutex_t))) == NULL) {
-		ERR("calloc");
-	}
-
 	/* Intializing brushes as clean and paints' vessels as full */
 	for(i = 0; i < n/2; ++i) {
 		brushes[i] = BRUSH_CLEAN;
@@ -278,17 +270,17 @@ int main(int argc, char** argv) {
 	for(i = 0; i < n; i++) {
 		/* Initializing conditional variables associated with painters */
 		pthread_cond_init(&painters_cond[i], NULL);
-		
-		/* Initializing paitnes' mutexes */
-		pthread_mutex_init(&painters_mutex[i], NULL);
 	}
 
-	pthread_create(&assistants[0], NULL, assistant1, NULL);
-	pthread_create(&assistants[1], NULL, assistant2, NULL);
-	pthread_create(&assistants[2], NULL, assistant3, NULL);
+	if(pthread_create(&assistants[0], NULL, assistant1, NULL)!= 0)
+			ERR("pthread_create");
+	if(pthread_create(&assistants[1], NULL, assistant2, NULL)!= 0)
+			ERR("pthread_create");
+	if(pthread_create(&assistants[2], NULL, assistant3, NULL)!= 0)
+			ERR("pthread_create");
+	
 	for(i = 0; i < n; ++i) {
 		
-
 		/* Setting state to thinking */
 		painters_state[i] = STATE_THINKING;
 		/* Setting painters paiting */
@@ -300,7 +292,8 @@ int main(int argc, char** argv) {
 		}
 		*paintersIds[i] = i;
 
-		pthread_create(&painters[i], NULL, painter, (void*)paintersIds[i]);
+		if(pthread_create(&painters[i], NULL, painter, (void*)paintersIds[i])!= 0)
+			ERR("pthread_create");
 	}
 
 	for(i = 0; i < n; i++) {
