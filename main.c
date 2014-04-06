@@ -24,11 +24,11 @@
 
 #define FULL_PAINTING 10
 
-#define MIN_THINKING 2
-#define MAX_THINKING 7
+#define MIN_THINKING 250000
+#define MAX_THINKING 1500000
 
-#define MIN_ASSISTANT_SLEEP 20
-#define MAX_ASSISTANT_SLEEP 70
+#define MIN_ASSISTANT_SLEEP MIN_THINKING * 2
+#define MAX_ASSISTANT_SLEEP MAX_THINKING * 2
 
 #define WINE_MAX 4
 
@@ -45,9 +45,14 @@ unsigned r_seed;
 
 void print_state() {
 	int i;
+	char* painter_state = "painting";
 	printf("Workshop state:\nBrushes:\n");
 	for(i = 0; i < n/2; i++) {
-		printf("[#%d: %d] ", i, brushes[i]);
+		if(brushes[i] == BRUSH_CLEAN) {
+			printf("[#%d: clean] ", i);
+		} else {
+			printf("[#%d: Painter#%d] ", i, brushes[i]);
+		}
 	}
 	printf("\nPaints:\n");
 	for(i = 0; i < n/2; i++) {
@@ -55,14 +60,14 @@ void print_state() {
 	}
 	printf("\nWine: %d\nPainters:\n", wine);
 	for(i = 0; i < n; i++) {
-		char* str = "painting";
+		painter_state = "painting";
 		if( painters_state[i] == STATE_THINKING ) {
-			str = "thinking";
+			painter_state = "thinking";
 		}
 		if( painters_state[i] == STATE_FINISHED ) {
-			str = "finished";
+			painter_state = "finished";
 		}
-		printf("[#%d: %s, %d] ", i, str, painting[i]);
+		printf("[#%d: %s, %d] ", i, painter_state, painting[i]);
 	}
 	printf("\n"); 
 }
@@ -107,6 +112,7 @@ void* assistant1(void* arg) {
 		}
 
 		pthread_mutex_unlock(&workshop);
+		print_state();
 //		printf("Assistant cleaned all brushes.\n");
 	}
 
@@ -174,11 +180,9 @@ void* painter(void* arg) {
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
-		/* print_state() */
-		/* printf("Painter#%d is thinking...\n", painterId); */
 		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);
 		
-		/* fprintf(stderr, "[%d], Locking workshop.\n", painterId); */
+		printf("Painter#%d wants to paint...\n", painterId);
 		pthread_mutex_lock(&workshop);
 
 		/* wait for resources */
@@ -188,9 +192,10 @@ void* painter(void* arg) {
 			pthread_cond_wait(&cond, &workshop);
 		}
 
+		
 		/* Set own state to painting */
 		painters_state[painterId] = STATE_PAINTING;
-
+		printf("Paitner#%d is painting.\n", painterId);
 /*		printf("Paint#%d: %d, brush#%d: %d, wine: %d\n", (painterId % 2) ? painterId/2 + 1 : painterId/2, paints[ (painterId % 2) ? painterId/2 + 1 : painterId/2]-1,
 			 painterId/2,
 			 painterId, wine-1);*/
