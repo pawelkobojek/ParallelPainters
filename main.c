@@ -30,9 +30,10 @@
 #define MIN_ASSISTANT_SLEEP 2
 #define MAX_ASSISTANT_SLEEP 7
 
-#define WINE_MAX 50
+#define WINE_MAX 750
 
 pthread_mutex_t workshop = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t* painters_mutex;
 pthread_cond_t* painters_cond;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_t* painters;
@@ -68,11 +69,13 @@ void print_state() {
 }
 
 int painting_possible(int painter) {
+	int brush = painter/2;
+	int paint = (painter % 2) ? (painter/2 + 1) % n/2 : painter/2;
 	return wine > 0 &&
 		painters_state[ (painter + 1) % n ] != STATE_PAINTING && 
 		painters_state[ (painter + n - 1) % n ] != STATE_PAINTING && 
-		paints[ (painter % 2) ? (painter/2 + 1) % n/2 : painter/2 ] > 0 && 
-		(brushes[painter/2] == painter || brushes[painter/2] == BRUSH_CLEAN);
+		paints[paint] > 0 && 
+		(brushes[brush] == painter || brushes[brush] == BRUSH_CLEAN);
 }
 
 int someone_is_painting() {
@@ -164,13 +167,12 @@ void* assistant3(void* arg) {
 */
 void* painter(void* arg) {
 	int painterId = *((int*)arg);
-
+	int brush = painterId / 2;
+	int paint = (painterId % 2) ? (painterId/2 + 1) % n/2 : painterId/2;
 /*	fprintf(stderr, "Painter#%d started!\n", painterId); */
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
-		painters_state[painterId] = STATE_THINKING;
-		pthread_cond_broadcast(&cond);
 
 		printf("Painter#%d is thinking...\n", painterId);
 		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);
@@ -194,18 +196,22 @@ void* painter(void* arg) {
 			 painterId/2,
 			 painterId, wine-1);*/
 
+		pthread_mutex_lock(&painters_mutex[painterId]);
 		/* Get resources */
 		wine--;
-		brushes[painterId/2] = painterId;
-		paints[ (painterId % 2) ? (painterId/2 + 1) % n/2 : painterId/2 ]--;
+		brushes[brush] = painterId;
+		paints[paint]--;
 
 
 		/* Unlock workshop */
 		pthread_mutex_unlock(&workshop);
-		
-		
+				
 		painting[painterId]++;
 
+		painters_state[painterId] = STATE_THINKING;
+		pthread_cond_broadcast(&cond);
+
+		pthread_mutex_unlock(&painters_mutex[painterId]);
 		printf("Painter's #%d painting: %d\n", painterId, painting[painterId]);
 
 	}
@@ -254,6 +260,10 @@ int main(int argc, char** argv) {
 		ERR("calloc");
 	}
 
+	if( (painters_mutex = calloc(n, sizeof(pthread_mutex_t))) == NULL) {
+		ERR("calloc");
+	}
+
 	/* Intializing brushes as clean and paints' vessels as full */
 	for(i = 0; i < n/2; ++i) {
 		brushes[i] = BRUSH_CLEAN;
@@ -274,6 +284,9 @@ int main(int argc, char** argv) {
 	for(i = 0; i < n; i++) {
 		/* Initializing conditional variables associated with painters */
 		pthread_cond_init(&painters_cond[i], NULL);
+		
+		/* Initializing paitnes' mutexes */
+		pthread_mutex_init(&painters_mutex[i], NULL);
 	}
 
 	pthread_create(&assistants[0], NULL, assistant1, NULL);
@@ -296,14 +309,21 @@ int main(int argc, char** argv) {
 		pthread_create(&painters[i], NULL, painter, (void*)paintersIds[i]);
 	}
 
+	for(i = 0; i < n; i++) {
+		if(pthread_join(painters[i], NULL) == -1) {
+			ERR("pthread_join");
+		}
+	}
+
+	print_state();
 	
-/*	for(i = 0; i < n; i++) {
+	for(i = 0; i < n; i++) {
 		pthread_cond_destroy(&painters_cond[i]);
 	}
 
 	free(paintersIds);
 	free(painters);	
-*/
 
-	pthread_exit(NULL);
+	return EXIT_SUCCESS;
+
 }

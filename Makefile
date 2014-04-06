@@ -1,5 +1,5 @@
 N = 10
-FLAGS = -lpthread -Wall -pedantic
+FLAGS = -pthread -Wall -pedantic
 
 compile: main.c 
 	gcc ${FLAGS} -o main main.c
