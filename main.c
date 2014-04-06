@@ -36,7 +36,6 @@ pthread_mutex_t workshop = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t* painters_mutex;
 pthread_cond_t* painters_cond;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-pthread_t* painters;
 int* painters_state;
 int* paints, *brushes;
 int* painting;
@@ -97,7 +96,7 @@ void* assistant1(void* arg) {
 		
 		pthread_mutex_lock(&workshop);
 		for(i = 0; i < n/2; i++) {
-			if( painters_state[2*i] != STATE_PAINTING && painters_state[2*i + 1] != STATE_PAINTING ) {
+			if( painters_state[(2*i) % n] != STATE_PAINTING && painters_state[(2*i + 1) % n] != STATE_PAINTING ) {
 				brushes[i] = BRUSH_CLEAN;
 			}
 		}
@@ -223,6 +222,7 @@ void* painter(void* arg) {
 
 int main(int argc, char** argv) {
 	pthread_t assistants[NUM_ASSISTANTS];
+	pthread_t* painters;
 	int i;
 	int** paintersIds;
 
@@ -270,17 +270,6 @@ int main(int argc, char** argv) {
 		paints[i] = PAINT_MAX;
 	}
 
-//	printf("Initial state:\n");
-//	printf("Brushes:\n");
-
-//	for(i = 0; i < n/2; ++i) {
-//		printf("Brush#%d: %d\n", i, brushes[i]);
-//	}
-
-//	for(i = 0; i < n/2; i++) {
-//		printf("Paint#%d: %d\n", i, paints[i]);
-//	}
-
 	for(i = 0; i < n; i++) {
 		/* Initializing conditional variables associated with painters */
 		pthread_cond_init(&painters_cond[i], NULL);
@@ -311,6 +300,12 @@ int main(int argc, char** argv) {
 
 	for(i = 0; i < n; i++) {
 		if(pthread_join(painters[i], NULL) == -1) {
+			ERR("pthread_join");
+		}
+	}
+
+	for(i = 0; i < 3; i++) {
+		if(pthread_join(assistants[i], NULL) == -1) {
 			ERR("pthread_join");
 		}
 	}
