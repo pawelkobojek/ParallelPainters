@@ -20,6 +20,7 @@
 #define STATE_PAINTING 101
 #define STATE_THINKING 102
 #define STATE_FINISHED 103
+#define STATE_WANTS_TO_PAINT 104
 
 #define FULL_PAINTING 10
 
@@ -65,6 +66,9 @@ void print_state() {
 		}
 		if( painters_state[i] == STATE_FINISHED ) {
 			painter_state = "finished";
+		}
+		if( painters_state[i] == STATE_WANTS_TO_PAINT ) {
+			painter_state = "wants to paint";
 		}
 		printf("[#%d: %s, %d] ", i, painter_state, painting[i]);
 	}
@@ -179,8 +183,8 @@ void* painter(void* arg) {
 
 	while(painting[painterId] != FULL_PAINTING) {
 		
-		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);
-		
+		usleep(rand_r(&r_seed) % (MAX_THINKING - MIN_THINKING) + MIN_THINKING);		
+		painters_state[painterId] = STATE_WANTS_TO_PAINT;
 		printf("Painter#%d wants to paint...\n", painterId);
 		pthread_mutex_lock(&workshop);
 
